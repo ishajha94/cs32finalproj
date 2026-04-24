@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HUDS Meal Planner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f5f0;
+      color: #222;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      padding: 2.5rem 2rem;
+    }
+    .logo { font-size: 2rem; margin-bottom: .25rem; }
+    h1 { font-size: 1.6rem; color: #a51c30; margin-bottom: .25rem; }
+    .subtitle { color: #666; font-size: .95rem; margin-bottom: 2rem; }
+
+    h2 {
+      font-size: .85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: #888;
+      margin: 1.75rem 0 .7rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: .4rem;
+    }
+
+    /* Text + select inputs */
+    input[type="text"], select {
+      width: 100%;
+      padding: .6rem .85rem;
+      border: 1.5px solid #ddd;
+      border-radius: 7px;
+      font-size: 1rem;
+      background: white;
+    }
+    input[type="text"]:focus, select:focus {
+      outline: none; border-color: #a51c30;
+    }
+
+    /* Chip grid */
+    .chip-grid { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .chip {
+      padding: .38rem .85rem;
+      border: 1.5px solid #ddd;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: .88rem;
+      user-select: none;
+      transition: all .15s;
+    }
+    .chip:hover { border-color: #a51c30; }
+    .chip.selected { background: #a51c30; border-color: #a51c30; color: white; }
+
+    /* Sliders */
+    .slider-row {
+      display: flex; align-items: center;
+      gap: 1rem; margin-bottom: .8rem;
+    }
+    .slider-row label { width: 130px; font-size: .9rem; color: #444; }
+    input[type="range"] { flex: 1; accent-color: #a51c30; cursor: pointer; }
+    .slider-val { width: 22px; font-weight: 700; color: #a51c30; text-align: right; }
+
+    /* Save button */
+    #save-btn {
+      width: 100%;
+      margin-top: 2rem;
+      padding: .9rem;
+      background: #a51c30;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    #save-btn:hover { background: #8b1728; }
+
+    /* View results link */
+    #go-results {
+      display: none;
+      text-align: center;
+      margin-top: 1rem;
+    }
+    #go-results a {
+      color: #a51c30;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: .95rem;
+    }
+    #go-results a:hover { text-decoration: underline; }
+
+    /* Saved dict output */
+    #output {
+      display: none;
+      margin-top: 1.5rem;
+      background: #1a1a1a;
+      color: #4ec94e;
+      font-family: "Courier New", monospace;
+      font-size: .82rem;
+      padding: 1.25rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      line-height: 1.55;
+    }
+    #output.visible { display: block; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="logo">🍽️</div>
+  <h1>HUDS Meal Planner</h1>
+  <p class="subtitle">Tell us what you like. We'll check the menu live and tell you if it's worth showing up.</p>
+
+  <!-- Name -->
+  <h2>Your Name</h2>
+  <input type="text" id="name" placeholder="e.g. Ana Marcela"/>
+
+  <!-- House / dining hall -->
+  <h2>Your House</h2>
+  <select id="location_id">
+    <option value="30">Annenberg Hall (Freshmen)</option>
+    <option value="7" selected>Dunster &amp; Mather</option>
+    <option value="2">Eliot &amp; Kirkland</option>
+    <option value="6">Leverett &amp; Quincy</option>
+    <option value="3">Lowell &amp; Adams</option>
+    <option value="8">Pforzheimer, Cabot &amp; Currier</option>
+    <option value="5">Winthrop &amp; Randolph</option>
+  </select>
+
+  <!-- Cuisines -->
+  <h2>Favorite Cuisines</h2>
+  <div class="chip-grid" id="cuisines">
+    <span class="chip" data-val="american">🇺🇸 American</span>
+    <span class="chip" data-val="italian">🇮🇹 Italian</span>
+    <span class="chip" data-val="mexican">🇲🇽 Mexican</span>
+    <span class="chip" data-val="asian">🥢 Asian</span>
+    <span class="chip" data-val="mediterranean">🫒 Mediterranean</span>
+    <span class="chip" data-val="indian">🍛 Indian</span>
+  </div>
+
+  <!-- Proteins -->
+  <h2>Favorite Proteins</h2>
+  <div class="chip-grid" id="proteins">
+    <span class="chip" data-val="chicken">🍗 Chicken</span>
+    <span class="chip" data-val="beef">🥩 Beef</span>
+    <span class="chip" data-val="fish">🐟 Fish</span>
+    <span class="chip" data-val="pork">🐷 Pork</span>
+    <span class="chip" data-val="tofu">🟨 Tofu</span>
+    <span class="chip" data-val="eggs">🥚 Eggs</span>
+  </div>
+
+  <!-- Sides -->
+  <h2>Favorite Sides &amp; Carbs</h2>
+  <div class="chip-grid" id="sides">
+    <span class="chip" data-val="rice">🍚 Rice</span>
+    <span class="chip" data-val="pasta">🍝 Pasta</span>
+    <span class="chip" data-val="bread">🍞 Bread</span>
+    <span class="chip" data-val="salad">🥗 Salad</span>
+    <span class="chip" data-val="fries">🍟 Fries</span>
+    <span class="chip" data-val="soup">🍲 Soup</span>
+  </div>
+
+  <!-- Restrictions -->
+  <h2>Dietary Restrictions</h2>
+  <div class="chip-grid" id="restrictions">
+    <span class="chip" data-val="vegetarian">🌿 Vegetarian</span>
+    <span class="chip" data-val="vegan">🌱 Vegan</span>
+    <span class="chip" data-val="gluten-free">🌾 Gluten-Free</span>
+    <span class="chip" data-val="halal">☪️ Halal</span>
+    <span class="chip" data-val="kosher">✡️ Kosher</span>
+  </div>
+
+  <!-- Sliders -->
+  <h2>Taste Profile</h2>
+
+  <div class="slider-row">
+    <label>🌶️ Spice tolerance</label>
+    <input type="range" id="spice" min="1" max="5" value="3"
+           oninput="document.getElementById('spice-val').textContent=this.value"/>
+    <span class="slider-val" id="spice-val">3</span>
+  </div>
+
+  <div class="slider-row">
+    <label>🧭 Adventurousness</label>
+    <input type="range" id="adventurous" min="1" max="5" value="3"
+           oninput="document.getElementById('adv-val').textContent=this.value"/>
+    <span class="slider-val" id="adv-val">3</span>
+  </div>
+
+  <button id="save-btn" onclick="savePreferences()">Save &amp; Go to Today's Menu →</button>
+
+  <div id="go-results">
+    <a href="/results">View today's menu &amp; suggestions →</a>
+  </div>
+
+  <pre id="output"></pre>
+
+</div>
+
+<script>
+  // Chip toggle
+  document.querySelectorAll(".chip-grid").forEach(grid => {
+    grid.addEventListener("click", e => {
+      if (e.target.classList.contains("chip"))
+        e.target.classList.toggle("selected");
+    });
+  });
+
+  function getSelected(gridId) {
+    return Array.from(
+      document.querySelectorAll(`#${gridId} .chip.selected`)
+    ).map(el => el.dataset.val);
+  }
+
+  function savePreferences() {
+    const payload = {
+      name:         document.getElementById("name").value.trim(),
+      location_id:  document.getElementById("location_id").value,
+      cuisines:     getSelected("cuisines"),
+      proteins:     getSelected("proteins"),
+      sides:        getSelected("sides"),
+      restrictions: getSelected("restrictions"),
+      spice_level:  document.getElementById("spice").value,
+      adventurous:  document.getElementById("adventurous").value,
+    };
+
+    fetch("/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+      const out = document.getElementById("output");
+      out.textContent = JSON.stringify(data.preferences, null, 2);
+      out.classList.add("visible");
+      document.getElementById("go-results").style.display = "block";
+    })
+    .catch(err => alert("Save failed: " + err));
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Today's HUDS Menu</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f5f0;
+      color: #222;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Header card */
+    .header-card {
+      background: #a51c30;
+      color: white;
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 1.25rem;
+    }
+    .header-card .logo { font-size: 1.8rem; }
+    .header-card h1 { font-size: 1.45rem; margin: .2rem 0 .1rem; }
+    .header-card .date { opacity: .8; font-size: .9rem; }
+
+    /* Meal tabs */
+    .tabs {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1.25rem;
+    }
+    .tab {
+      padding: .5rem 1.1rem;
+      border-radius: 20px;
+      border: 1.5px solid #ddd;
+      cursor: pointer;
+      font-size: .9rem;
+      background: white;
+      transition: all .15s;
+    }
+    .tab.active  { background: #a51c30; color: white; border-color: #a51c30; }
+    .tab:hover:not(.active) { border-color: #a51c30; }
+
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 {
+      font-size: .82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: #888;
+      margin-bottom: 1rem;
+    }
+
+    /* Verdict banner */
+    .verdict {
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .verdict.go   { background: #e8f5e9; color: #2e7d32; border-left: 5px solid #4caf50; }
+    .verdict.skip { background: #fce4ec; color: #c62828; border-left: 5px solid #ef5350; }
+    .verdict .top-picks { margin-top: .5rem; font-weight: 400; font-size: .9rem; }
+
+    /* Dish list */
+    .dish-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .5rem .2rem;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: .9rem;
+    }
+    .dish-row:last-child { border-bottom: none; }
+    .dish-row.match     { color: #1b5e20; font-weight: 500; }
+    .dish-row.no-match  { color: #aaa; }
+    .score-badge {
+      font-size: .78rem; padding: .18rem .5rem;
+      border-radius: 12px; min-width: 32px; text-align: center;
+    }
+    .match    .score-badge { background: #e8f5e9; color: #2e7d32; }
+    .no-match .score-badge { background: #f5f5f5; color: #bbb; }
+
+    /* Suggestions */
+    .suggestion {
+      border: 1.5px solid #eee;
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin-bottom: .75rem;
+    }
+    .suggestion:last-child { margin-bottom: 0; }
+    .sug-title  { font-weight: 700; font-size: 1rem; margin-bottom: .3rem; }
+    .sug-dishes { font-size: .9rem; color: #333; margin-bottom: .3rem; }
+    .sug-dish   { display: inline-block; background: #f0f4ff; border-radius: 5px;
+                   padding: .15rem .5rem; margin: .15rem .15rem 0 0; }
+    .sug-reason { font-size: .82rem; color: #888; }
+
+    /* Like/dislike buttons on dish rows */
+    .dish-actions { display: flex; gap: .3rem; }
+    .like-btn, .dislike-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: .9rem; opacity: .4; transition: opacity .15s;
+      padding: 0 .15rem;
+    }
+    .like-btn:hover    { opacity: 1; }
+    .dislike-btn:hover { opacity: 1; }
+    .like-btn.active    { opacity: 1; }
+    .dislike-btn.active { opacity: 1; }
+
+    /* Loading / error */
+    .loading { text-align: center; padding: 3rem; color: #aaa; font-size: .95rem; }
+    .error-msg { background: #fce4ec; color: #c62828; padding: 1rem; border-radius: 8px; }
+
+    /* Back link */
+    .back { color: #a51c30; text-decoration: none; font-size: .9rem; font-weight: 500; }
+    .back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header-card">
+    <div class="logo">🍽️</div>
+    <h1>Today's HUDS Menu</h1>
+    <div class="date" id="header-date">Loading...</div>
+  </div>
+
+  <!-- Meal selector tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="loadMeal('all', this)">All Meals</div>
+    <div class="tab" onclick="loadMeal('breakfast', this)">Breakfast</div>
+    <div class="tab" onclick="loadMeal('lunch', this)">Lunch</div>
+    <div class="tab" onclick="loadMeal('dinner', this)">Dinner</div>
+  </div>
+
+  <!-- Verdict -->
+  <div class="card" id="verdict-card">
+    <div class="loading">Fetching today's menu from HUDS...</div>
+  </div>
+
+  <!-- Suggestions -->
+  <div class="card" id="suggestions-card" style="display:none">
+    <h2>🌟 Meal Suggestions for You</h2>
+    <div id="suggestions-content"></div>
+  </div>
+
+  <!-- Full dish list -->
+  <div class="card" id="dishes-card" style="display:none">
+    <h2>Full Menu</h2>
+    <div id="dishes-content"></div>
+  </div>
+
+  <br/>
+  <a class="back" href="/">← Update my preferences</a>
+
+</div>
+
+<script>
+  // Persist liked/disliked IDs in localStorage so they carry across page reloads
+  let likedIds    = JSON.parse(localStorage.getItem("liked_ids")    || "[]");
+  let dislikedIds = JSON.parse(localStorage.getItem("disliked_ids") || "[]");
+
+  function toggleLike(id, type) {
+    if (type === "like") {
+      likedIds    = likedIds.includes(id)    ? likedIds.filter(x => x !== id)    : [...likedIds, id];
+      dislikedIds = dislikedIds.filter(x => x !== id);
+    } else {
+      dislikedIds = dislikedIds.includes(id) ? dislikedIds.filter(x => x !== id) : [...dislikedIds, id];
+      likedIds    = likedIds.filter(x => x !== id);
+    }
+    localStorage.setItem("liked_ids",    JSON.stringify(likedIds));
+    localStorage.setItem("disliked_ids", JSON.stringify(dislikedIds));
+    // Sync back to preferences.json so future scoring picks them up
+    fetch("/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ liked_ids: likedIds, disliked_ids: dislikedIds }),
+    });
+    loadMeal(currentMeal);
+  }
+
+  let currentMeal = "all";
+
+  function loadMeal(meal, tabEl) {
+    currentMeal = meal;
+    if (tabEl) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      tabEl.classList.add("active");
+    }
+
+    document.getElementById("verdict-card").innerHTML =
+      '<div class="loading">Fetching today\'s menu from HUDS...</div>';
+    document.getElementById("suggestions-card").style.display = "none";
+    document.getElementById("dishes-card").style.display      = "none";
+
+    const url = meal === "all" ? "/menu" : `/menu?meal=${meal}`;
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error);
+        renderAll(data);
+      })
+      .catch(err => {
+        document.getElementById("verdict-card").innerHTML =
+          `<div class="error-msg">⚠️ ${err.message}</div>`;
+      });
+
+    // Also load suggestions
+    fetch("/suggestions")
+      .then(r => r.json())
+      .then(data => renderSuggestions(data.suggestions))
+      .catch(() => {});
+  }
+
+  function renderAll(data) {
+    // Header date
+    document.getElementById("header-date").textContent =
+      new Date(data.date + "T12:00:00").toLocaleDateString("en-US",
+        { weekday: "long", month: "long", day: "numeric" });
+
+    // Verdict
+    const v   = data.verdict;
+    const ico = v.verdict === "go" ? "✅" : "⛔";
+    document.getElementById("verdict-card").innerHTML = `
+      <div class="verdict ${v.verdict}">
+        ${ico} ${v.message}
+        ${ v.top_picks.length
+            ? `<div class="top-picks">🌟 ${v.top_picks.join(" · ")}</div>`
+            : "" }
+      </div>`;
+
+    // Dish list
+    const dishesDiv = document.getElementById("dishes-content");
+    dishesDiv.innerHTML = "";
+    data.dishes.forEach(d => {
+      const cls   = d.match ? "match" : "no-match";
+      const score = d.score > 0 ? `+${d.score}` : `${d.score}`;
+      const likedActive    = likedIds.includes(d.id)    ? "active" : "";
+      const dislikedActive = dislikedIds.includes(d.id) ? "active" : "";
+      const row = document.createElement("div");
+      row.className = `dish-row ${cls}`;
+      row.innerHTML = `
+        <span>${d.name}</span>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span class="score-badge">${score}</span>
+          <div class="dish-actions">
+            <button class="like-btn ${likedActive}"
+                    onclick="toggleLike(${d.id},'like')" title="I like this">👍</button>
+            <button class="dislike-btn ${dislikedActive}"
+                    onclick="toggleLike(${d.id},'dislike')" title="Not for me">👎</button>
+          </div>
+        </div>`;
+      dishesDiv.appendChild(row);
+    });
+    document.getElementById("dishes-card").style.display = "block";
+  }
+
+  function renderSuggestions(suggestions) {
+    if (!suggestions || !suggestions.length) return;
+    const content = document.getElementById("suggestions-content");
+    content.innerHTML = suggestions.map(s => `
+      <div class="suggestion">
+        <div class="sug-title">${s.title}</div>
+        <div class="sug-dishes">
+          ${s.components.map(c => `<span class="sug-dish">${c}</span>`).join("")}
+        </div>
+        <div class="sug-reason">${s.reason}</div>
+      </div>
+    `).join("");
+    document.getElementById("suggestions-card").style.display = "block";
+  }
+
+  // Load on page open
+  loadMeal("all");
+</script>
+</body>
+</html>
